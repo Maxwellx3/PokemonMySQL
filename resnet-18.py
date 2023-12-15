@@ -1,11 +1,14 @@
+from traceback import print_tb
 from img2vec_pytorch import Img2Vec
 from PIL import Image
 import numpy as np
 import os
+import psycopg2
+import json
 
 # Inicializar el modelo (seleccionar el tipo de modelo)
 # Puedes usar 'resnet-18', 'resnet-50', 'resnet-101', 'resnet-152', 'vgg-16' o 'vgg-19'
-img2vec = Img2Vec(model='resnet-18')
+img2vec = Img2Vec(model='resnet50')
 
 def preprocess_image(image_path):
     # Cargar la imagen
@@ -30,24 +33,34 @@ def calcular_histograma_de_colores(imagen_path):
     histograma = np.concatenate((hist_red, hist_green, hist_blue))
     return histograma
 
-# Rutas de las imágenes
-ruta_imagen1 = 'abra.jpg'
-ruta_carpeta = './poke'
-# Preprocesar las imágenes
-img1 = preprocess_image(ruta_imagen1)
-# Obtener los vectores de características de las dos imágenes
-vec1 = img2vec.get_vec(img1)
-his1 = calcular_histograma_de_colores(ruta_imagen1)
+ruta_carpeta1 = './pokemon_images_shiny'
 
-for filename in os.listdir(ruta_carpeta):
-    img2 = preprocess_image(os.path.join(ruta_carpeta, filename))
-    vec2 = img2vec.get_vec(img2)
-    distance = np.linalg.norm(vec1 - vec2)
-    print(distance)
+# Conexión a la base de datos
+conn = psycopg2.connect(
+        dbname='Proyecto2',
+        user='postgres',
+        password='1',
+        host='localhost',
+    )
+# Abrir un cursor para realizar operaciones con la base de datos
+cur = conn.cursor()
 
-print('Histograma')
-for filename in os.listdir(ruta_carpeta):
-    img2 = calcular_histograma_de_colores(os.path.join(ruta_carpeta, filename))
-    distance = np.linalg.norm(his1 - img2)
-    print(distance)
+
+for filename in os.listdir(ruta_carpeta1):        
+    vec = img2vec.get_vec(preprocess_image(os.path.join(ruta_carpeta1, filename)))
+    # Calcular el histograma de colores
+    hist = calcular_histograma_de_colores(os.path.join(ruta_carpeta1, filename))
+    # Insertar los datos en la tabla de la base de datos # Convertir los vectores de NumPy a listas de Python
+    # Convertir los vectores a formato JSON
+    vec_json = json.dumps(vec.tolist())  # Convierte el ndarray a una lista y luego a JSON
+    hist_json = json.dumps(hist.tolist())  # Convierte el ndarray a una lista y luego a JSON
+    print(hist)
+    # Insertar los datos en la tabla de la base de datos
+    cur.execute("INSERT INTO elementos (texto, vector_caracteristico, histograma) VALUES (%s, %s, %s)", (str(filename), vec_json, hist_json))
+# Cerrar la conexión a la base de datos
+# Hacer commit para guardar los cambios
+conn.commit()
+cur.close()
+conn.close()
+
 
