@@ -34,6 +34,39 @@ def calcular_histograma_de_colores(imagen_path):
     histograma = np.concatenate((hist_red, hist_green, hist_blue))
     return histograma
 
+def normalize_to_100(vector):
+    min_val = np.min(vector)
+    max_val = np.max(vector)
+    
+    normalized_vector = 100 * ((vector - min_val) / (max_val - min_val))
+    
+    return normalized_vector
+
+ruta1 = 'abra.jpg'
+ruta2 = 'alakazam.jpg'
+
+img1 = preprocess_image(ruta1)  
+vec1 = normalize_to_100(img2vec.get_vec(img1) )
+
+img2 =  preprocess_image(ruta2)
+vec2 = normalize_to_100(img2vec.get_vec(img2))
+
+distance = np.linalg.norm(vec1 - vec2)
+
+print(distance)
+
+his1 = normalize_to_100(calcular_histograma_de_colores(ruta1))
+his2 = normalize_to_100(calcular_histograma_de_colores(ruta2))
+
+
+distance = np.linalg.norm(his1-his2)
+
+print(distance)
+
+concatenado1 = np.concatenate((vec1,his1))
+concatenado2 = np.concatenate((vec2,his2))
+
+print(np.linalg.norm(concatenado1-concatenado2))
 ruta_carpeta1 = './pokemon_images_shiny'
 '''
 # Conexión a la base de datos
@@ -65,29 +98,3 @@ conn.commit()
 cur.close()
 conn.close()
 '''
-ruta1 = 'abra.jpg'
-ruta2 = 'alakazam.jpg'
-
-img1 = preprocess_image(ruta1)  # Función para procesar la imagen
-vec1 = img2vec.get_vec(img1)  # Suponiendo que img2vec es un objeto que obtiene el vector de una imagen
-# Suponiendo que vec1 ya está definido como el vector de referencia
-
-img2 =  preprocess_image(ruta2)
-vec2 = img2vec.get_vec(img2)
-print(vec1)
-print(vec2)
-
-distance = np.linalg.norm(vec1 - vec2)
-
-print(distance)
-
-his1 = calcular_histograma_de_colores(ruta1)
-his2 = calcular_histograma_de_colores(ruta2)
-print(his1)
-print(his2)
-
-distance = np.linalg.norm(his1-his2)
-
-print(distance)
-
-
