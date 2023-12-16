@@ -1,3 +1,4 @@
+from math import dist
 from traceback import print_tb
 from img2vec_pytorch import Img2Vec
 from PIL import Image
@@ -34,7 +35,7 @@ def calcular_histograma_de_colores(imagen_path):
     return histograma
 
 ruta_carpeta1 = './pokemon_images_shiny'
-
+'''
 # Conexión a la base de datos
 conn = psycopg2.connect(
         dbname='Proyecto2',
@@ -54,7 +55,8 @@ for filename in os.listdir(ruta_carpeta1):
     # Convertir los vectores a formato JSON
     vec_json = json.dumps(vec.tolist())  # Convierte el ndarray a una lista y luego a JSON
     hist_json = json.dumps(hist.tolist())  # Convierte el ndarray a una lista y luego a JSON
-    print(hist)
+    
+    print(vec)
     # Insertar los datos en la tabla de la base de datos
     cur.execute("INSERT INTO elementos (texto, vector_caracteristico, histograma) VALUES (%s, %s, %s)", (str(filename), vec_json, hist_json))
 # Cerrar la conexión a la base de datos
@@ -62,5 +64,30 @@ for filename in os.listdir(ruta_carpeta1):
 conn.commit()
 cur.close()
 conn.close()
+'''
+ruta1 = 'abra.jpg'
+ruta2 = 'alakazam.jpg'
+
+img1 = preprocess_image(ruta1)  # Función para procesar la imagen
+vec1 = img2vec.get_vec(img1)  # Suponiendo que img2vec es un objeto que obtiene el vector de una imagen
+# Suponiendo que vec1 ya está definido como el vector de referencia
+
+img2 =  preprocess_image(ruta2)
+vec2 = img2vec.get_vec(img2)
+print(vec1)
+print(vec2)
+
+distance = np.linalg.norm(vec1 - vec2)
+
+print(distance)
+
+his1 = calcular_histograma_de_colores(ruta1)
+his2 = calcular_histograma_de_colores(ruta2)
+print(his1)
+print(his2)
+
+distance = np.linalg.norm(his1-his2)
+
+print(distance)
 
 
