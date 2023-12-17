@@ -2,11 +2,12 @@ create extension plpython3u;
 
 
 CREATE TABLE elementos (
-    id serial PRIMARY KEY,
-    cadena text,
-	vector_caracteristico text,
-	histograma text
+    id SERIAL PRIMARY KEY,
+    nombre TEXT,
+    vector_caracteristico FLOAT[],
+	histograma FLOAT[]
 );
+
 
 CREATE TABLE pivotes (
     id_pivote serial PRIMARY KEY,
@@ -54,6 +55,9 @@ $$ LANGUAGE plpython3u;
 
 -- Ejemplo de uso de la función
 SELECT distancia(ARRAY[1.0, 2.0, 3.0], ARRAY[4.0, 5.0, 6.0]);
+
+select distancia(e.vector_caracteristico,el.vector_caracteristico) from elementos e, elementos el
+where e.id = 1 and el.id =2;
 
 
 

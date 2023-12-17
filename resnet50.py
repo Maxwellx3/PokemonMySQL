@@ -3,9 +3,6 @@ from traceback import print_tb
 from img2vec_pytorch import Img2Vec
 from PIL import Image
 import numpy as np
-import os
-import psycopg2
-import json
 
 # Inicializar el modelo (seleccionar el tipo de modelo)
 # Puedes usar 'resnet-18', 'resnet-50', 'resnet-101', 'resnet-152', 'vgg-16' o 'vgg-19'
@@ -21,7 +18,7 @@ def preprocess_image(image_path):
     
     # Redimensionar la imagen a las dimensiones aceptadas por el modelo (si es necesario)
     img = img.resize((224, 224))  # Las dimensiones pueden variar según el modelo
-    
+    img = img2vec.get_vec(img)
     return img
 
 # Función para calcular el histograma de colores de una imagen
@@ -41,17 +38,15 @@ def normalize_to_100(vector):
     normalized_vector = 100 * ((vector - min_val) / (max_val - min_val))
     
     return normalized_vector
-
+'''
 ruta1 = 'abra.jpg'
 ruta2 = 'alakazam.jpg'
 
 img1 = preprocess_image(ruta1)  
-vec1 = normalize_to_100(img2vec.get_vec(img1) )
 
 img2 =  preprocess_image(ruta2)
-vec2 = normalize_to_100(img2vec.get_vec(img2))
 
-distance = np.linalg.norm(vec1 - vec2)
+distance = np.linalg.norm(img1 - img2)
 
 print(distance)
 
@@ -63,11 +58,13 @@ distance = np.linalg.norm(his1-his2)
 
 print(distance)
 
-concatenado1 = np.concatenate((vec1,his1))
-concatenado2 = np.concatenate((vec2,his2))
+concatenado1 = np.concatenate((img1,his1))
+concatenado2 = np.concatenate((img2,his2))
 
 print(np.linalg.norm(concatenado1-concatenado2))
-ruta_carpeta1 = './pokemon_images_shiny'
+ruta_carpeta1 = './pokemon_images_shiny'''
+
+
 '''
 # Conexión a la base de datos
 conn = psycopg2.connect(
