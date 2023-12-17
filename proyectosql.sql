@@ -1,6 +1,5 @@
 create extension plpython3u;
 
-
 CREATE TABLE elementos (
     id SERIAL PRIMARY KEY,
     nombre TEXT,
@@ -8,18 +7,17 @@ CREATE TABLE elementos (
 	histograma FLOAT[]
 );
 
-
 CREATE TABLE pivotes (
     id_pivote serial PRIMARY KEY,
     pivote text,
-	vector_caracteristico text,
-	histograma text
+	vector_caracteristico FLOAT[],
+	histograma FLOAT[]
 );
 
 CREATE TABLE nodos (
     id_nodo serial PRIMARY KEY,
-    distancia_vc integer,
-	distancia_his integer, 
+    distancia_vc REAL,
+	distancia_his REAL, 
 	id_pivote integer REFERENCES pivotes(id_pivote),
     nodo_padre integer REFERENCES nodos(id_nodo)
 );
