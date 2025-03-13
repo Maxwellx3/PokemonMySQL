@@ -4,7 +4,8 @@ CREATE TABLE elementos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nombre TEXT,
     vector_caracteristico TEXT,
-    histograma TEXT
+    histograma TEXT,
+    UNIQUE KEY (nombre(255))
 );
 
 CREATE TABLE pivotes (
