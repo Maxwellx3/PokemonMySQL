@@ -82,12 +82,12 @@ conn = mysql.connector.connect(
     host='localhost',
     user='root', 
     password='303336',
-    database='pokemon'
+    database='gaperros'
 )
 cursor = conn.cursor()
 
 # Insertar las imágenes
-# insertar_imagenes('./pokemones', cursor, conn)
+# insertar_imagenes('./gaperros', cursor, conn)
 
 # Comparar dos Pokémon
 """
@@ -96,15 +96,9 @@ try:
     print("La distancia euclidiana entre los Pokémon es:", dist)
 except ValueError as e:
     print(e)
-"""
+
 # Obtener los 10 Pokémon más similares
-try:
-    top_similares = obtener_top_10_similares("electrode.jpg", cursor)
-    print("\nTop 10 Pokémon más similares a 'electrode.jpg':")
-    for nombre, dist in top_similares:
-        print(f"{nombre}: {dist}")
-except ValueError as e:
-    print(e)
+"""
 
 # Cerrar la conexión con la base de datos
 cursor.close()
