@@ -1,10 +1,8 @@
-from math import dist
-from traceback import print_tb
 from img2vec_pytorch import Img2Vec
 from PIL import Image
 import numpy as np
 
-# Inicializar el modelo (seleccionar el tipo de modelo)
+# Utiliza un modelo preentrenado (por defecto ResNet-50 a través de img2vec_pytorch)
 # Puedes usar 'resnet-18', 'resnet-50', 'resnet-101', 'resnet-152', 'vgg-16' o 'vgg-19'
 img2vec = Img2Vec(model='resnet50')  # Inicializar una sola vez fuera de la función
 
@@ -33,7 +31,8 @@ def calcular_histograma_de_colores(imagen_path):
 def normalize_to_100(vector):
     min_val = np.min(vector)
     max_val = np.max(vector)
-    
+    if max_val == min_val:
+        return np.zeros_like(vector)
     normalized_vector = 100 * ((vector - min_val) / (max_val - min_val))
     
     return normalized_vector
