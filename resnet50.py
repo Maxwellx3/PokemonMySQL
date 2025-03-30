@@ -1,17 +1,26 @@
-from img2vec_pytorch import Img2Vec
+import torch
+import torchvision.models as models
+import torchvision.transforms as transforms
 from PIL import Image
 import numpy as np
 
-# Utiliza un modelo preentrenado (por defecto ResNet-50 a través de img2vec_pytorch)
-# Puedes usar 'resnet-18', 'resnet-50', 'resnet-101', 'resnet-152', 'vgg-16' o 'vgg-19'
-img2vec = Img2Vec(model='resnet50')  # Inicializar una sola vez fuera de la función
+# Cargar ResNet50 con los pesos actualizados
+model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+model.eval()  # Modo evaluación
+model = torch.nn.Sequential(*list(model.children())[:-1])  # Quitar la capa de clasificación
+
+# Transformaciones para la imagen
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
 
 def obtener_vector_caracteristico(imagen_path):
-    img = Image.open(imagen_path)
-    if img.mode != 'RGB':
-        img = img.convert('RGB')
-    img = img.resize((224, 224))
-    vector = img2vec.get_vec(img)
+    img = Image.open(imagen_path).convert("RGB")
+    img = transform(img).unsqueeze(0)  # Agregar dimensión de batch
+    with torch.no_grad():
+        vector = model(img).squeeze().numpy()  # Obtener el vector característico
     return np.round(vector, 4)
 
 # Función para calcular el histograma de colores de una imagen

@@ -7,6 +7,7 @@ import resnet50 as rn
 
 ARCHIVO_DISTANCIA = "max_distancia.txt"
 CARPETA_IMAGENES = "./gaperros"
+CARPETA_TEST = "./test"
 
 def calcular_distancia(p1, p2):
     # Verificar que ambos vectores tengan la misma longitud
@@ -115,6 +116,9 @@ conn = conectar_db()
 cursor = conn.cursor()
 # Insertar las imágenes
 #insertar_imagenes(CARPETA_IMAGENES, cursor, conn)
+
+#INSERTAR IMAGENES DE PRUEBA
+#insertar_imagenes(CARPETA_TEST, cursor, conn)
 cursor.close()
 conn.close()
 
