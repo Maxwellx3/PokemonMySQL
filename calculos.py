@@ -9,19 +9,10 @@ ARCHIVO_DISTANCIA = "max_distancia.txt"
 CARPETA_IMAGENES = "./gaperros"
 CARPETA_TEST = "./test"
 
-def calcular_distancia(p1, p2):
-    # Verificar que ambos vectores tengan la misma longitud
-    if len(p1) != len(p2):
-        raise ValueError("Los vectores deben tener la misma longitud")
-    
-    # Calcular la distancia euclidiana
-    return math.sqrt(sum((a - b) ** 2 for a, b in zip(p1, p2)))
-    
 def insertar_imagenes(carpeta_imagenes, cursor, conn):
     for filename in os.listdir(carpeta_imagenes):
         if filename.lower().endswith(('.jpg', '.png')):
             ruta_imagen = os.path.join(carpeta_imagenes, filename)
-            # Obtener vector característico y histograma
             vec = rn.obtener_vector_caracteristico(ruta_imagen)
             hist = rn.calcular_histograma_de_colores(ruta_imagen)
             
@@ -29,13 +20,43 @@ def insertar_imagenes(carpeta_imagenes, cursor, conn):
             vec_json = json.dumps(vec.tolist())
             hist_json = json.dumps(hist.tolist())
             
-            # Insertar en la base de datos (usando INSERT IGNORE para evitar duplicados)
+            # INSERT IGNORE para evitar duplicados
             cursor.execute("INSERT IGNORE INTO elementos (nombre, vector_caracteristico, histograma) VALUES (%s, %s, %s)",
                            (filename, vec_json, hist_json))
     conn.commit()
 
-def comparar_pokemones(nombre1, nombre2, cursor):
-    # Recuperar los vectores de los dos animales
+def calcular_distancia(p1, p2):
+    if len(p1) != len(p2):
+        raise ValueError("Los vectores deben tener la misma longitud")
+    # Distancia euclidiana
+    return math.sqrt(sum((a - b) ** 2 for a, b in zip(p1, p2)))
+
+def calcular_distancia_histograma(hist1, hist2):
+    if len(hist1) != len(hist2):
+        raise ValueError("Los histogramas deben tener la misma longitud")
+    return math.sqrt(sum((a - b) ** 2 for a, b in zip(hist1, hist2)))
+
+def obtener_datos_imagen(nombre, cursor):
+    cursor.execute("SELECT vector_caracteristico, histograma FROM elementos WHERE nombre = %s", (nombre,))
+    fila = cursor.fetchone()
+    if fila is None:
+        raise ValueError("La imagen no se encontró en la base de datos.")
+    vector = json.loads(fila[0])
+    hist = json.loads(fila[1])
+    return vector, hist
+    
+# Combinar las distancias con pesos
+def comparar_imagenes_combinadas(nombre1, nombre2, cursor, alpha=0.9, beta=0.1):
+    vector1, hist1 = obtener_datos_imagen(nombre1, cursor)
+    vector2, hist2 = obtener_datos_imagen(nombre2, cursor)
+    
+    dist_vector = calcular_distancia(vector1, vector2)
+    dist_hist = calcular_distancia_histograma(hist1, hist2)
+    
+    distancia_total = alpha * dist_vector + beta * dist_hist
+    return distancia_total
+
+def comparar_animales(nombre1, nombre2, cursor):
     cursor.execute("SELECT vector_caracteristico FROM elementos WHERE nombre = %s", (nombre1,))
     row1 = cursor.fetchone()
     cursor.execute("SELECT vector_caracteristico FROM elementos WHERE nombre = %s", (nombre2,))
@@ -48,7 +69,7 @@ def comparar_pokemones(nombre1, nombre2, cursor):
     vector1 = json.loads(row1[0])
     vector2 = json.loads(row2[0])
     
-    # Calcular la distancia euclidiana
+    # Distancia euclidiana
     return calcular_distancia(vector1, vector2)
     
 def obtener_top_10_similares(nombre, cursor):
@@ -62,12 +83,9 @@ def obtener_top_10_similares(nombre, cursor):
     row = cursor.fetchone()
     if row is None:
         raise ValueError("El animal base no se encontró en la base de datos.")
-    
     base_vector = json.loads(row[0])
     
-    # Obtener todos los demás registros (excluyendo el animal base)
-    cursor.execute("SELECT nombre, vector_caracteristico FROM elementos WHERE nombre <> %s", (nombre,))
-        
+    cursor.execute("SELECT nombre, vector_caracteristico FROM elementos WHERE nombre <> %s", (nombre,))    
     similitudes = []
     for registro in cursor.fetchall():
         nombre_otro = registro[0]
@@ -75,7 +93,6 @@ def obtener_top_10_similares(nombre, cursor):
         dist = calcular_distancia(base_vector, vector_otro)
         similitudes.append((nombre_otro, dist))
     
-    # Ordenar por distancia ascendente y tomar los primeros 10
     similitudes.sort(key=lambda x: x[1])
     return similitudes[:10]
 
@@ -110,6 +127,8 @@ def cargar_max_distancia():
             return float(f.read().strip())
     else:
         return calcular_max_distancia()
+    
+
 
 MAX_DISTANCIA = cargar_max_distancia()
 conn = conectar_db()

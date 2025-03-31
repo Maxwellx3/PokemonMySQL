@@ -3,7 +3,7 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 import os
 from db import obtener_fotos, obtener_cursor
-from calculos import obtener_top_10_similares, comparar_pokemones, MAX_DISTANCIA
+from calculos import obtener_top_10_similares, comparar_animales, comparar_imagenes_combinadas, MAX_DISTANCIA
 
 CARPETA_IMAGENES = "./gaperros"
 
@@ -36,31 +36,23 @@ def mostrar_imagen(event):
     if seleccion:
         id_foto = lista_fotos.get(seleccion[0])
         ruta_imagen = os.path.join(CARPETA_IMAGENES, id_foto)
-        
         if os.path.exists(ruta_imagen):
             imagen = Image.open(ruta_imagen)
             imagen = imagen.resize((300, 300), Image.Resampling.LANCZOS)
             img_tk = ImageTk.PhotoImage(imagen)
             label_imagen.config(image=img_tk)
             label_imagen.image = img_tk
-            
-            # Obtener las 10 imágenes más similares
             conn, cursor = obtener_cursor()
             similares = obtener_top_10_similares(id_foto, cursor)
             conn.close()
-            
-            # Mostrar miniaturas de las imágenes similares
             for widget in frame_similares.winfo_children():
                 widget.destroy()
-            
             for i, (nombre_similar, distancia) in enumerate(similares):
                 ruta_similar = os.path.join(CARPETA_IMAGENES, nombre_similar)
                 if os.path.exists(ruta_similar):
                     img_similar = Image.open(ruta_similar).resize((100, 100), Image.Resampling.LANCZOS)
                     img_similar_tk = ImageTk.PhotoImage(img_similar)
-                     # Calcular porcentaje de similitud con `MAX_DISTANCIA` precargado
-                    similitud = max(0, 100 * (1 - (distancia / MAX_DISTANCIA)))
-                    # Mostrar imagen
+                    similitud = max(0, 100 * (1 - ((distancia - 8) / (MAX_DISTANCIA - 8))))
                     frame_item = tk.Frame(frame_similares)
                     frame_item.grid(row=0, column=i, padx=5, pady=5)
                     lbl_img = tk.Label(frame_item, image=img_similar_tk)
@@ -85,7 +77,6 @@ def mostrar_previsualizacion(event, lista, label, seleccion_global):
             label.config(image=img_tk)
             label.image = img_tk
             
-            # Guardar la selección actual en la variable global correcta
             if seleccion_global == "1":
                 seleccion_actual_1 = id_foto
             elif seleccion_global == "2":
@@ -98,14 +89,16 @@ def calcular_distancia():
     if seleccion_actual_1 and seleccion_actual_2:
         conn, cursor = obtener_cursor()
         try:
-            distancia = comparar_pokemones(seleccion_actual_1, seleccion_actual_2, cursor)
+            distancia = comparar_animales(seleccion_actual_1, seleccion_actual_2, cursor)
         except ValueError as e:
             distancia = None
             label_resultado.config(text=str(e))
         conn.close()
         
         if distancia is not None:
-            similitud = max(0, 100 * (1 - (distancia / MAX_DISTANCIA)))
+            if distancia != 0:
+                similitud = max(0, 100 * (1 - ((distancia - 8) / (MAX_DISTANCIA - 8))))
+            else: similitud = 100
             label_resultado.config(text=f"Distancia: {distancia:.4f}\nSimilitud: {similitud:.2f}%")
     else:
         label_resultado.config(text="Seleccione dos imágenes")
@@ -146,14 +139,27 @@ pantalla_comparacion = tk.Frame(root)
 tk.Label(pantalla_comparacion, text="Seleccione dos imágenes para comparar", font=("Arial", 14)).pack(pady=5)
 frame_comparacion = tk.Frame(pantalla_comparacion)
 frame_comparacion.pack()
-lista_fotos_1 = tk.Listbox(frame_comparacion, height=10)
-lista_fotos_1.pack(side=tk.LEFT, padx=5)
+
+frame_lista1 = tk.Frame(frame_comparacion)
+frame_lista1.pack(side=tk.LEFT, padx=5)
+scrollbar1 = tk.Scrollbar(frame_lista1, orient=tk.VERTICAL)
+lista_fotos_1 = tk.Listbox(frame_lista1, height=10, yscrollcommand=scrollbar1.set)
+scrollbar1.config(command=lista_fotos_1.yview)
+scrollbar1.pack(side=tk.RIGHT, fill=tk.Y)
+lista_fotos_1.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 label_previsualizacion_1 = tk.Label(frame_comparacion)
 label_previsualizacion_1.pack(side=tk.LEFT, padx=5)
-lista_fotos_2 = tk.Listbox(frame_comparacion, height=10)
-lista_fotos_2.pack(side=tk.RIGHT, padx=5)
+
+frame_lista2 = tk.Frame(frame_comparacion)
+frame_lista2.pack(side=tk.RIGHT, padx=5)
+scrollbar2 = tk.Scrollbar(frame_lista2, orient=tk.VERTICAL)
+lista_fotos_2 = tk.Listbox(frame_lista2, height=10, yscrollcommand=scrollbar2.set)
+scrollbar2.config(command=lista_fotos_2.yview)
+scrollbar2.pack(side=tk.RIGHT, fill=tk.Y)
+lista_fotos_2.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 label_previsualizacion_2 = tk.Label(frame_comparacion)
 label_previsualizacion_2.pack(side=tk.RIGHT, padx=5)
+
 tk.Button(pantalla_comparacion, text="Calcular Distancia", command=calcular_distancia).pack(pady=5)
 label_resultado = tk.Label(pantalla_comparacion, text="Distancia: ", font=("Arial", 12))
 label_resultado.pack()

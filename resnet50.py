@@ -23,16 +23,29 @@ def obtener_vector_caracteristico(imagen_path):
         vector = model(img).squeeze().numpy()  # Obtener el vector característico
     return np.round(vector, 4)
 
-# Función para calcular el histograma de colores de una imagen
 def calcular_histograma_de_colores(imagen_path):
+    """
+    Calcula y normaliza el histograma de colores de una imagen.
+    
+    Retorna:
+        np.ndarray: Histograma normalizado (concatenado para los canales R, G y B).
+    """
     try:
         imagen = Image.open(imagen_path)
         imagen_np = np.array(imagen)
-        hist_red, _ = np.histogram(imagen_np[:,:,0].ravel(), bins=256, range=(0, 256))
-        hist_green, _ = np.histogram(imagen_np[:,:,1].ravel(), bins=256, range=(0, 256))
-        hist_blue, _ = np.histogram(imagen_np[:,:,2].ravel(), bins=256, range=(0, 256))
+        # Calcular histogramas para cada canal
+        hist_red, _ = np.histogram(imagen_np[:, :, 0].ravel(), bins=256, range=(0, 256))
+        hist_green, _ = np.histogram(imagen_np[:, :, 1].ravel(), bins=256, range=(0, 256))
+        hist_blue, _ = np.histogram(imagen_np[:, :, 2].ravel(), bins=256, range=(0, 256))
+        # Concatenar histogramas
         histograma = np.concatenate((hist_red, hist_green, hist_blue))
-        return histograma
+        # Normalizar dividiendo por la suma total (o número de píxeles)
+        total = np.sum(histograma)
+        if total > 0:
+            histograma_normalizado = histograma / total
+        else:
+            histograma_normalizado = histograma
+        return histograma_normalizado
     except Exception as e:
         print(f"Error procesando {imagen_path}: {str(e)}")
         return np.zeros(768)  # Vector cero como fallback
