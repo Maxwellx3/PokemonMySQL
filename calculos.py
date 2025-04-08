@@ -4,6 +4,7 @@ import math
 import numpy as np
 from db import conectar_db
 import resnet50 as rn
+import capas as crn
 
 ARCHIVO_DISTANCIA = "max_distancia.txt"
 CARPETA_IMAGENES = "./gaperros"
@@ -13,16 +14,14 @@ def insertar_imagenes(carpeta_imagenes, cursor, conn):
     for filename in os.listdir(carpeta_imagenes):
         if filename.lower().endswith(('.jpg', '.png')):
             ruta_imagen = os.path.join(carpeta_imagenes, filename)
-            vec = rn.obtener_vector_caracteristico(ruta_imagen)
-            hist = rn.calcular_histograma_de_colores(ruta_imagen)
-            
+            vec = rn.obtener_vector_caracteristico(ruta_imagen) #Aqui cambio las capas a usar
+            print(filename)
             # Convertir a formato JSON
             vec_json = json.dumps(vec.tolist())
-            hist_json = json.dumps(hist.tolist())
             
             # INSERT IGNORE para evitar duplicados
-            cursor.execute("INSERT IGNORE INTO elementos (nombre, vector_caracteristico, histograma) VALUES (%s, %s, %s)",
-                           (filename, vec_json, hist_json))
+            cursor.execute("INSERT IGNORE INTO elementos (nombre, vector_caracteristico) VALUES (%s, %s)",
+                           (filename, vec_json))
     conn.commit()
 
 def calcular_distancia(p1, p2):
@@ -31,30 +30,13 @@ def calcular_distancia(p1, p2):
     # Distancia euclidiana
     return math.sqrt(sum((a - b) ** 2 for a, b in zip(p1, p2)))
 
-def calcular_distancia_histograma(hist1, hist2):
-    if len(hist1) != len(hist2):
-        raise ValueError("Los histogramas deben tener la misma longitud")
-    return math.sqrt(sum((a - b) ** 2 for a, b in zip(hist1, hist2)))
-
 def obtener_datos_imagen(nombre, cursor):
-    cursor.execute("SELECT vector_caracteristico, histograma FROM elementos WHERE nombre = %s", (nombre,))
+    cursor.execute("SELECT vector_caracteristico FROM elementos WHERE nombre = %s", (nombre,))
     fila = cursor.fetchone()
     if fila is None:
         raise ValueError("La imagen no se encontró en la base de datos.")
     vector = json.loads(fila[0])
-    hist = json.loads(fila[1])
-    return vector, hist
-    
-# Combinar las distancias con pesos
-def comparar_imagenes_combinadas(nombre1, nombre2, cursor, alpha=0.9, beta=0.1):
-    vector1, hist1 = obtener_datos_imagen(nombre1, cursor)
-    vector2, hist2 = obtener_datos_imagen(nombre2, cursor)
-    
-    dist_vector = calcular_distancia(vector1, vector2)
-    dist_hist = calcular_distancia_histograma(hist1, hist2)
-    
-    distancia_total = alpha * dist_vector + beta * dist_hist
-    return distancia_total
+    return vector
 
 def comparar_animales(nombre1, nombre2, cursor):
     cursor.execute("SELECT vector_caracteristico FROM elementos WHERE nombre = %s", (nombre1,))
@@ -127,9 +109,8 @@ def cargar_max_distancia():
             return float(f.read().strip())
     else:
         return calcular_max_distancia()
+        #return ValueError("No se encontro archivo de maxima distancia.")
     
-
-
 MAX_DISTANCIA = cargar_max_distancia()
 conn = conectar_db()
 cursor = conn.cursor()

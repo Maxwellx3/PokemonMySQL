@@ -1,9 +1,8 @@
 import tkinter as tk
-from tkinter import ttk
 from PIL import Image, ImageTk
 import os
 from db import obtener_fotos, obtener_cursor
-from calculos import obtener_top_10_similares, comparar_animales, comparar_imagenes_combinadas, MAX_DISTANCIA
+from calculos import obtener_top_10_similares, comparar_animales, MAX_DISTANCIA
 
 CARPETA_IMAGENES = "./gaperros"
 
@@ -52,7 +51,7 @@ def mostrar_imagen(event):
                 if os.path.exists(ruta_similar):
                     img_similar = Image.open(ruta_similar).resize((100, 100), Image.Resampling.LANCZOS)
                     img_similar_tk = ImageTk.PhotoImage(img_similar)
-                    similitud = max(0, 100 * (1 - ((distancia - 8) / (MAX_DISTANCIA - 8))))
+                    similitud = max(0, 100 * (1 - ((distancia) / (MAX_DISTANCIA))))
                     frame_item = tk.Frame(frame_similares)
                     frame_item.grid(row=0, column=i, padx=5, pady=5)
                     lbl_img = tk.Label(frame_item, image=img_similar_tk)
@@ -97,7 +96,7 @@ def calcular_distancia():
         
         if distancia is not None:
             if distancia != 0:
-                similitud = max(0, 100 * (1 - ((distancia - 8) / (MAX_DISTANCIA - 8))))
+                similitud = max(0, 100 * (1 - ((distancia) / (MAX_DISTANCIA))))
             else: similitud = 100
             label_resultado.config(text=f"Distancia: {distancia:.4f}\nSimilitud: {similitud:.2f}%")
     else:
