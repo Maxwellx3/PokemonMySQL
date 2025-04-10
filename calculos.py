@@ -1,11 +1,11 @@
 import os
 import json
-import math
-import numpy as np
 from db import conectar_db
 import resnet50 as rn
-import capas as crn
+from busqueda_faiss import construir_indice, buscar_similares, calcular_distancia_faiss
+import numpy as np
 
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 ARCHIVO_DISTANCIA = "max_distancia.txt"
 CARPETA_IMAGENES = "./gaperros"
 CARPETA_TEST = "./test"
@@ -18,17 +18,10 @@ def insertar_imagenes(carpeta_imagenes, cursor, conn):
             print(filename)
             # Convertir a formato JSON
             vec_json = json.dumps(vec.tolist())
-            
             # INSERT IGNORE para evitar duplicados
             cursor.execute("INSERT IGNORE INTO elementos (nombre, vector_caracteristico) VALUES (%s, %s)",
                            (filename, vec_json))
     conn.commit()
-
-def calcular_distancia(p1, p2):
-    if len(p1) != len(p2):
-        raise ValueError("Los vectores deben tener la misma longitud")
-    # Distancia euclidiana
-    return math.sqrt(sum((a - b) ** 2 for a, b in zip(p1, p2)))
 
 def obtener_datos_imagen(nombre, cursor):
     cursor.execute("SELECT vector_caracteristico FROM elementos WHERE nombre = %s", (nombre,))
@@ -46,58 +39,65 @@ def comparar_animales(nombre1, nombre2, cursor):
     
     if row1 is None or row2 is None:
         raise ValueError("Uno de los animales no se encontró en la base de datos.")
-    
-    # Convertir JSON a listas
     vector1 = json.loads(row1[0])
     vector2 = json.loads(row2[0])
-    
-    # Distancia euclidiana
-    return calcular_distancia(vector1, vector2)
-    
+    return calcular_distancia_faiss(vector1, vector2)
+
 def obtener_top_10_similares(nombre, cursor):
     """
-    Dado el nombre de un animal, obtiene su vector característico y calcula la distancia euclidiana
-    con los demás animales almacenados en la base de datos. Retorna una lista con los 10 animales más
-    similares (los que tengan menor distancia).
+    Devuelve una lista con los 10 animales más similares al dado (por nombre)
+    usando FAISS.
     """
-    # Obtener el vector del animal base
+    # Obtener vector base
     cursor.execute("SELECT vector_caracteristico FROM elementos WHERE nombre = %s", (nombre,))
     row = cursor.fetchone()
-    if row is None:
-        raise ValueError("El animal base no se encontró en la base de datos.")
-    base_vector = json.loads(row[0])
-    
-    cursor.execute("SELECT nombre, vector_caracteristico FROM elementos WHERE nombre <> %s", (nombre,))    
-    similitudes = []
-    for registro in cursor.fetchall():
-        nombre_otro = registro[0]
-        vector_otro = json.loads(registro[1])
-        dist = calcular_distancia(base_vector, vector_otro)
-        similitudes.append((nombre_otro, dist))
-    
-    similitudes.sort(key=lambda x: x[1])
-    return similitudes[:10]
+    if not row:
+        raise ValueError("El animal no se encontró en la base de datos.")
+    vector_base = json.loads(row[0])
+    # Obtener todos los demás vectores
+    cursor.execute("SELECT nombre, vector_caracteristico FROM elementos WHERE nombre <> %s", (nombre,))
+    resultados = cursor.fetchall()
+    nombres = []
+    vectores = []
+    for nombre_otro, vector_str in resultados:
+        try:
+            vector_otro = json.loads(vector_str)
+            nombres.append(nombre_otro)
+            vectores.append(vector_otro)
+        except Exception as e:
+            print(f"Error cargando vector para {nombre_otro}: {e}")
+    # Construir índice FAISS y buscar similares
+    index = construir_indice(vectores)
+    indices, distancias = buscar_similares(index, vector_base)
+    # Retornar nombres con sus distancias
+    similares = [(nombres[i], float(distancias[j])) for j, i in enumerate(indices)]
+    return similares
+
+def calcular_max_distancia_faiss(vectores):
+    """
+    Calcula la distancia máxima entre todos los vectores usando FAISS.
+    Recibe una lista de vectores (cada uno debe ser lista o array de floats).
+    """
+    if not vectores:
+        return 100
+    # Construir el índice FAISS
+    index = construir_indice(vectores)
+    # Convertimos a matriz numpy tipo float32
+    datos = np.array(vectores, dtype='float32')
+    # Buscamos la distancia de cada vector contra todos los vectores
+    # (incluyendo a sí mismo con distancia 0)
+    distancias, _ = index.search(datos, len(vectores))
+    max_dist = distancias.max()
+    return max_dist if max_dist else 100
 
 def calcular_max_distancia():
-    """
-    Calcula la distancia máxima entre todos los vectores almacenados en la tabla 'elementos'.
-    Esta función recorre todos los pares y guarda el resultado en un archivo para uso futuro.
-    """
     conn = conectar_db()
     cursor = conn.cursor()
     cursor.execute("SELECT vector_caracteristico FROM elementos;")
     filas = cursor.fetchall()
     conn.close()
-
-    vectores = [np.array(json.loads(fila[0])) for fila in filas if fila[0]]
-    max_dist = 0
-    if vectores:
-        for i in range(len(vectores)):
-            for j in range(i + 1, len(vectores)):
-                dist = np.linalg.norm(vectores[i] - vectores[j])
-                max_dist = max(max_dist, dist)
-    max_dist = max_dist if max_dist else 100
-
+    vectores = [json.loads(fila[0]) for fila in filas if fila[0]]
+    max_dist = calcular_max_distancia_faiss(vectores)
     with open(ARCHIVO_DISTANCIA, "w") as f:
         f.write(str(max_dist))
     return max_dist
@@ -109,7 +109,6 @@ def cargar_max_distancia():
             return float(f.read().strip())
     else:
         return calcular_max_distancia()
-        #return ValueError("No se encontro archivo de maxima distancia.")
     
 MAX_DISTANCIA = cargar_max_distancia()
 conn = conectar_db()

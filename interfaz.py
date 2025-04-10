@@ -4,6 +4,7 @@ import os
 from db import obtener_fotos, obtener_cursor
 from calculos import obtener_top_10_similares, comparar_animales, MAX_DISTANCIA
 
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 CARPETA_IMAGENES = "./gaperros"
 
 seleccion_actual_1 = None
@@ -57,7 +58,7 @@ def mostrar_imagen(event):
                     lbl_img = tk.Label(frame_item, image=img_similar_tk)
                     lbl_img.image = img_similar_tk
                     lbl_img.pack()
-                    tk.Label(frame_item, text=f"{similitud:.2f}%", font=("Arial", 10)).pack()
+                    tk.Label(frame_item, text=f"Distancia: {distancia:.4f}\nSimilitud: {similitud:.2f}%", font=("Arial", 10)).pack() #text=f"{similitud:.2f}%", font=("Arial", 10) #text=f"Distancia: {distancia:.4f}\nSimilitud: {similitud:.2f}%"
         else:
             label_imagen.config(image=None, text="Imagen no encontrada")
 
@@ -69,13 +70,11 @@ def mostrar_previsualizacion(event, lista, label, seleccion_global):
     if seleccion:
         id_foto = lista.get(seleccion[0])
         ruta_imagen = os.path.join(CARPETA_IMAGENES, id_foto)
-        
         if os.path.exists(ruta_imagen):
             imagen = Image.open(ruta_imagen).resize((200, 200), Image.Resampling.LANCZOS)
             img_tk = ImageTk.PhotoImage(imagen)
             label.config(image=img_tk)
             label.image = img_tk
-            
             if seleccion_global == "1":
                 seleccion_actual_1 = id_foto
             elif seleccion_global == "2":
@@ -93,7 +92,6 @@ def calcular_distancia():
             distancia = None
             label_resultado.config(text=str(e))
         conn.close()
-        
         if distancia is not None:
             if distancia != 0:
                 similitud = max(0, 100 * (1 - ((distancia) / (MAX_DISTANCIA))))
