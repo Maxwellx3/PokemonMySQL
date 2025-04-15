@@ -23,6 +23,21 @@ def insertar_imagenes(carpeta_imagenes, cursor, conn):
                            (filename, vec_json))
     conn.commit()
 
+def comparar_con_imagen_externa(nombre_bd, ruta_externa, cursor):
+    # Obtener vector de la imagen en la base de datos
+    cursor.execute("SELECT vector_caracteristico FROM elementos WHERE nombre = %s", (nombre_bd,))
+    row_bd = cursor.fetchone()
+    if row_bd is None:
+        raise ValueError("La imagen seleccionada de la base de datos no se encontró.")
+    
+    vector_bd = json.loads(row_bd[0])
+    
+    # Obtener vector de la imagen externa
+    vector_ext = rn.obtener_vector_caracteristico(ruta_externa)
+    
+    # Calcular distancia
+    return calcular_distancia_faiss(vector_bd, vector_ext)
+
 def obtener_datos_imagen(nombre, cursor):
     cursor.execute("SELECT vector_caracteristico FROM elementos WHERE nombre = %s", (nombre,))
     fila = cursor.fetchone()
@@ -72,6 +87,34 @@ def obtener_top_10_similares(nombre, cursor):
     # Retornar nombres con sus distancias
     similares = [(nombres[i], float(distancias[j])) for j, i in enumerate(indices)]
     return similares
+
+def obtener_top_10_similares_externa(ruta_externa, cursor):
+    """
+    Devuelve los 10 elementos más similares a una imagen externa
+    usando FAISS.
+    """
+    # Obtener vector de la imagen externa
+    vector_externa = rn.obtener_vector_caracteristico(ruta_externa)
+    
+    # Obtener todos los vectores de la base de datos
+    cursor.execute("SELECT nombre, vector_caracteristico FROM elementos")
+    resultados = cursor.fetchall()
+    
+    nombres = []
+    vectores = []
+    for nombre, vector_str in resultados:
+        try:
+            vectores.append(json.loads(vector_str))
+            nombres.append(nombre)
+        except Exception as e:
+            print(f"Error cargando vector para {nombre}: {e}")
+    
+    # Construir índice FAISS y buscar similares
+    index = construir_indice(vectores)
+    indices, distancias = buscar_similares(index, vector_externa)
+    
+    # Retornar top 10 con nombres y distancias
+    return [(nombres[i], float(distancias[j])) for j, i in enumerate(indices)][:10]
 
 def calcular_max_distancia_faiss(vectores):
     """
