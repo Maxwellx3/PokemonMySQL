@@ -4,7 +4,8 @@ import mysql.connector
 DB_CONFIG = {
     "host": "localhost",
     "user": "root",
-    "password": "303336",
+    "password": "root",
+    "port": 3307,
     "database": "gaperros"
 }
 
